@@ -25,7 +25,7 @@ can include using `module` blocks.
 
 For hands-on guides that will walk you through the process of using and creating
 modules, see our [track on
-learn.hashicorp.com](https://learn.hashicorp.com/terraform/modules/modules-overview).
+learn.hashicorp.com](https://learn.hashicorp.com/terraform/modules/modules-overview?utm_source=WEBSITE&utm_medium=WEB_IO&utm_offer=ARTICLE_PAGE&utm_content=DOCS).
 
 ## Module structure
 
