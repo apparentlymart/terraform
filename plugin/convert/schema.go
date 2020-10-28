@@ -37,8 +37,13 @@ func ConfigSchemaToProto(b *configschema.Block) *proto.Schema_Block {
 		if err != nil {
 			panic(err)
 		}
-
 		attr.Type = ty
+
+		cm, err := configSchemaCollectionMetadataToProto(a.CollectionMetadata)
+		if err != nil {
+			panic(err)
+		}
+		attr.CollectionMetadata = cm
 
 		block.Attributes = append(block.Attributes, attr)
 	}
@@ -49,6 +54,70 @@ func ConfigSchemaToProto(b *configschema.Block) *proto.Schema_Block {
 	}
 
 	return block
+}
+
+func configSchemaCollectionMetadataToProto(in *configschema.CollectionMetadata) (*proto.Schema_CollectionMetadata, error) {
+	ret := &proto.Schema_CollectionMetadata{
+		Min: int64(in.Min),
+		Max: int64(in.Max),
+	}
+
+	obMeta := make([]*proto.Schema_ObjectAttrMetadata, len(in.ObjectAttrMetadata))
+	for i, om := range in.ObjectAttrMetadata {
+		object := &proto.Schema_ObjectAttrMetadata{
+			Min:             int64(om.Min),
+			Max:             int64(om.Max),
+			Description:     om.Description,
+			Required:        om.Required,
+			Optional:        om.Optional,
+			Computed:        om.Computed,
+			Sensitive:       om.Sensitive,
+			DescriptionKind: protoStringKind(om.DescriptionKind),
+			Deprecated:      om.Deprecated,
+		}
+		// TODO: This Thing
+		// path, err := AttributePath(om.Path)
+		// if err != nil {
+		// 	return ret, err
+		// }
+		// object.Path = path
+		obMeta[i] = object
+	}
+
+	ret.ObjectAttrMetadata = obMeta
+	return ret, nil
+}
+
+func protoCollectionMetadataToConfigSchema(in *proto.Schema_CollectionMetadata) (*configschema.CollectionMetadata, error) {
+	ret := &configschema.CollectionMetadata{
+		Min: int(in.Min),
+		Max: int(in.Max),
+	}
+
+	obMeta := make([]*configschema.ObjectAttrMetadata, len(in.ObjectAttrMetadata))
+	for i, om := range in.ObjectAttrMetadata {
+		object := &configschema.ObjectAttrMetadata{
+			Min:             int(om.Min),
+			Max:             int(om.Max),
+			Description:     om.Description,
+			Required:        om.Required,
+			Optional:        om.Optional,
+			Computed:        om.Computed,
+			Sensitive:       om.Sensitive,
+			DescriptionKind: schemaStringKind(om.DescriptionKind),
+			Deprecated:      om.Deprecated,
+		}
+		// TODO: This Thing
+		// path, err := AttributePath(om.Path)
+		// if err != nil {
+		// 	return ret, err
+		// }
+		// object.Path = path
+		obMeta[i] = object
+	}
+
+	ret.ObjectAttrMetadata = obMeta
+	return ret, nil
 }
 
 func protoStringKind(k configschema.StringKind) proto.StringKind {
@@ -119,6 +188,12 @@ func ProtoToConfigSchema(b *proto.Schema_Block) *configschema.Block {
 		if err := json.Unmarshal(a.Type, &attr.Type); err != nil {
 			panic(err)
 		}
+
+		cm, err := protoCollectionMetadataToConfigSchema(a.CollectionMetadata)
+		if err != nil {
+			panic(err)
+		}
+		attr.CollectionMetadata = cm
 
 		block.Attributes[a.Name] = attr
 	}

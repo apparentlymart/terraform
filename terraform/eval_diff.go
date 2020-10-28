@@ -87,7 +87,7 @@ func (n *EvalCheckPlannedChange) Eval(ctx EvalContext) tfdiags.Diagnostics {
 		}
 	}
 
-	errs := objchange.AssertObjectCompatible(schema, plannedChange.After, actualChange.After)
+	errs := objchange.AssertBlockCompatible(schema, plannedChange.After, actualChange.After)
 	for _, err := range errs {
 		diags = diags.Append(tfdiags.Sourceless(
 			tfdiags.Error,

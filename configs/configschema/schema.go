@@ -40,6 +40,12 @@ type Attribute struct {
 	// Type is a type specification that the attribute's value must conform to.
 	Type cty.Type
 
+	// CollectionMetadata contains metadata for collection type attributes.
+	CollectionMetadata *CollectionMetadata
+
+	// These are set from the CollectionTypeMetadata sent by the provider
+	Min, Max int
+
 	// Description is an English-language description of the purpose and
 	// usage of the attribute. A description should be concise and use only
 	// one or two sentences, leaving full definition to longer-form
@@ -70,6 +76,26 @@ type Attribute struct {
 	Sensitive bool
 
 	Deprecated bool
+}
+
+type CollectionMetadata struct {
+	// Only valid for objects
+	ObjectAttrMetadata []*ObjectAttrMetadata
+
+	// Only valid for list/set/maps
+	Min, Max int
+}
+
+type ObjectAttrMetadata struct {
+	AttributePath   cty.Path
+	Min, Max        int
+	Description     string
+	DescriptionKind StringKind
+	Required        bool
+	Optional        bool
+	Computed        bool
+	Sensitive       bool
+	Deprecated      bool
 }
 
 // NestedBlock represents the embedding of one block within another.

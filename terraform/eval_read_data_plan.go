@@ -116,7 +116,7 @@ func (n *evalReadDataPlan) Eval(ctx EvalContext) tfdiags.Diagnostics {
 		// generate a proposed value for comparison to ensure the data source
 		// is returning a result following the rules of the provider contract.
 		proposedVal := objchange.ProposedNewObject(schema, priorVal, configVal)
-		if errs := objchange.AssertObjectCompatible(schema, proposedVal, newVal); len(errs) > 0 {
+		if errs := objchange.AssertBlockCompatible(schema, proposedVal, newVal); len(errs) > 0 {
 			// Resources have the LegacyTypeSystem field to signal when they are
 			// using an SDK which may not produce precise values. While data
 			// sources are read-only, they can still return a value which is not

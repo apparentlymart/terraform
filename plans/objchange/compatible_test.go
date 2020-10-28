@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/terraform/tfdiags"
 )
 
-func TestAssertObjectCompatible(t *testing.T) {
+func TestAssertBlockCompatible(t *testing.T) {
 	schemaWithFoo := configschema.Block{
 		Attributes: map[string]*configschema.Attribute{
 			"foo": {Type: cty.String, Optional: true},
@@ -1402,7 +1402,7 @@ func TestAssertObjectCompatible(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("%02d: %#v and %#v", i, test.Planned, test.Actual), func(t *testing.T) {
-			errs := AssertObjectCompatible(test.Schema, test.Planned, test.Actual)
+			errs := AssertBlockCompatible(test.Schema, test.Planned, test.Actual)
 
 			wantErrs := make(map[string]struct{})
 			gotErrs := make(map[string]struct{})

@@ -96,6 +96,29 @@ message Schema {
         bool sensitive = 7;
         StringKind description_kind = 8;
         bool deprecated = 9;
+        CollectionMetadata collection_metadata = 10;
+    }
+
+    message CollectionMetadata {
+        // NOTE: ObjectAttrMetadata could be a map, depending on how well path
+        // strings work. I chose a list because I don't want to parse strings
+        // without being very sure.
+        repeated ObjectAttrMetadata object_attr_metadata = 1;
+        int64 min = 2;
+        int64 max = 3;
+    }
+
+    message ObjectAttrMetadata {
+        AttributePath path = 1;
+        string description = 2;
+        StringKind description_kind = 3;
+        bool required = 4;
+        bool optional = 5;
+        bool computed = 6;
+        bool sensitive = 7;
+        bool deprecated = 8;
+        int64 min = 9;
+        int64 max = 10;
     }
 
     message NestedBlock {

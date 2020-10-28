@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform/configs/configschema"
 )
 
-// AssertObjectCompatible checks whether the given "actual" value is a valid
+// AssertBlockCompatible checks whether the given "actual" value is a valid
 // completion of the possibly-partially-unknown "planned" value.
 //
 // This means that any known leaf value in "planned" must be equal to the
@@ -22,11 +22,11 @@ import (
 //
 // The two values must have types that conform to the given schema's implied
 // type, or this function will panic.
-func AssertObjectCompatible(schema *configschema.Block, planned, actual cty.Value) []error {
-	return assertObjectCompatible(schema, planned, actual, nil)
+func AssertBlockCompatible(schema *configschema.Block, planned, actual cty.Value) []error {
+	return assertBlockCompatible(schema, planned, actual, nil)
 }
 
-func assertObjectCompatible(schema *configschema.Block, planned, actual cty.Value, path cty.Path) []error {
+func assertBlockCompatible(schema *configschema.Block, planned, actual cty.Value, path cty.Path) []error {
 	var errs []error
 	var atRoot string
 	if len(path) == 0 {
@@ -91,7 +91,7 @@ func assertObjectCompatible(schema *configschema.Block, planned, actual cty.Valu
 			if maybeUnknownBlocks && actualV.IsNull() {
 				continue
 			}
-			moreErrs := assertObjectCompatible(&blockS.Block, plannedV, actualV, path)
+			moreErrs := assertBlockCompatible(&blockS.Block, plannedV, actualV, path)
 			errs = append(errs, moreErrs...)
 		case configschema.NestingList:
 			// A NestingList might either be a list or a tuple, depending on
@@ -122,7 +122,7 @@ func assertObjectCompatible(schema *configschema.Block, planned, actual cty.Valu
 					continue
 				}
 				actualEV := actualV.Index(idx)
-				moreErrs := assertObjectCompatible(&blockS.Block, plannedEV, actualEV, append(path, cty.IndexStep{Key: idx}))
+				moreErrs := assertBlockCompatible(&blockS.Block, plannedEV, actualEV, append(path, cty.IndexStep{Key: idx}))
 				errs = append(errs, moreErrs...)
 			}
 		case configschema.NestingMap:
@@ -141,7 +141,7 @@ func assertObjectCompatible(schema *configschema.Block, planned, actual cty.Valu
 
 					plannedEV := plannedV.GetAttr(k)
 					actualEV := actualV.GetAttr(k)
-					moreErrs := assertObjectCompatible(&blockS.Block, plannedEV, actualEV, append(path, cty.GetAttrStep{Name: k}))
+					moreErrs := assertBlockCompatible(&blockS.Block, plannedEV, actualEV, append(path, cty.GetAttrStep{Name: k}))
 					errs = append(errs, moreErrs...)
 				}
 				if !maybeUnknownBlocks { // new blocks may appear if unknown blocks were present in the plan
@@ -168,7 +168,7 @@ func assertObjectCompatible(schema *configschema.Block, planned, actual cty.Valu
 						continue
 					}
 					actualEV := actualV.Index(idx)
-					moreErrs := assertObjectCompatible(&blockS.Block, plannedEV, actualEV, append(path, cty.IndexStep{Key: idx}))
+					moreErrs := assertBlockCompatible(&blockS.Block, plannedEV, actualEV, append(path, cty.IndexStep{Key: idx}))
 					errs = append(errs, moreErrs...)
 				}
 			}
@@ -188,7 +188,7 @@ func assertObjectCompatible(schema *configschema.Block, planned, actual cty.Valu
 			}
 
 			setErrs := assertSetValuesCompatible(plannedV, actualV, path, func(plannedEV, actualEV cty.Value) bool {
-				errs := assertObjectCompatible(&blockS.Block, plannedEV, actualEV, append(path, cty.IndexStep{Key: actualEV}))
+				errs := assertBlockCompatible(&blockS.Block, plannedEV, actualEV, append(path, cty.IndexStep{Key: actualEV}))
 				return len(errs) == 0
 			})
 			errs = append(errs, setErrs...)
@@ -471,4 +471,16 @@ func assertSetValuesCompatible(planned, actual cty.Value, path cty.Path, f func(
 		}
 	}
 	return errs
+}
+
+// assertObjectCompatible
+func AssertObjectCompatible(schema *configschema.Attribute, planned, actual cty.Value) []error {
+	return assertObjectCompatible(schema, planned, actual)
+}
+
+func assertObjectCompatible(schema *configschema.Attribute, planned, actual cty.Value) []error {
+	panic("not implemented")
+
+	// if attr-level computed/optional/required are set, use that to apply to the entire object
+	// otherwise check each object attr
 }
