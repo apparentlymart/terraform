@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform/configs/configschema"
 	proto "github.com/hashicorp/terraform/internal/tfplugin5"
 	"github.com/hashicorp/terraform/providers"
+	"github.com/zclconf/go-cty/cty"
 )
 
 // ConfigSchemaToProto takes a *configschema.Block and converts it to a
@@ -33,12 +34,17 @@ func ConfigSchemaToProto(b *configschema.Block) *proto.Schema_Block {
 			Deprecated:      a.Deprecated,
 		}
 
-		ty, err := json.Marshal(a.Type)
-		if err != nil {
-			panic(err)
+		if a.Type != cty.NilType {
+			ty, err := json.Marshal(a.Type)
+			if err != nil {
+				panic(err)
+			}
+			attr.Type = ty
 		}
 
-		attr.Type = ty
+		if a.NestedBlock != nil {
+			attr.NestedBlock = protoSchemaNestedBlock(name, a.NestedBlock)
+		}
 
 		block.Attributes = append(block.Attributes, attr)
 	}
@@ -116,8 +122,14 @@ func ProtoToConfigSchema(b *proto.Schema_Block) *configschema.Block {
 			Deprecated:      a.Deprecated,
 		}
 
-		if err := json.Unmarshal(a.Type, &attr.Type); err != nil {
-			panic(err)
+		if a.Type != nil {
+			if err := json.Unmarshal(a.Type, &attr.Type); err != nil {
+				panic(err)
+			}
+		}
+
+		if a.NestedBlock != nil {
+			attr.NestedBlock = schemaNestedBlock(a.NestedBlock)
 		}
 
 		block.Attributes[a.Name] = attr

@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/hashicorp/hcl/v2/hcldec"
+	"github.com/zclconf/go-cty/cty"
 )
 
 var mapLabelNames = []string{"key"}
@@ -183,9 +184,35 @@ func (b *Block) DecoderSpec() hcldec.Spec {
 }
 
 func (a *Attribute) decoderSpec(name string) hcldec.Spec {
-	return &hcldec.AttrSpec{
-		Name:     name,
-		Type:     a.Type,
-		Required: a.Required,
+	ret := &hcldec.AttrSpec{Name: name}
+
+	if a.NestedBlock != nil {
+		var optAttrs []string
+		listOptionalAttrsFromBlock(a.NestedBlock.Block, optAttrs)
+
+		ty := a.NestedBlock.Block.ImpliedType()
+		if !ty.IsObjectType() {
+			panic("unpossible")
+		}
+
+		ret.Type = cty.ObjectWithOptionalAttrs(ty.AttributeTypes(), optAttrs)
+		ret.Required = a.NestedBlock.MinItems > 0
+
+		return ret
+	}
+
+	ret.Type = a.Type
+	return ret
+}
+
+func listOptionalAttrsFromBlock(b Block, optAttrs []string) {
+	for name, attr := range b.Attributes {
+		if attr.Optional == true {
+			optAttrs = append(optAttrs, name)
+		}
+	}
+
+	for _, block := range b.BlockTypes {
+		listOptionalAttrsFromBlock(block.Block, optAttrs)
 	}
 }
