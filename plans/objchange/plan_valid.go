@@ -248,6 +248,11 @@ func assertPlannedValueValid(attrS *configschema.Attribute, priorV, configV, pla
 		return errs
 	}
 
+	// If this attribute has a nested block, validate the inner block
+	if attrS.NestedBlock != nil {
+		return assertPlanValid(&attrS.NestedBlock.Block, priorV, configV, plannedV, path)
+	}
+
 	// If none of the above conditions match, the provider has made an invalid
 	// change to this attribute.
 	if priorV.IsNull() {
