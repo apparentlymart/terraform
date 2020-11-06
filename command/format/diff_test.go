@@ -310,7 +310,6 @@ new line
 		},
 
 		// Sensitive
-
 		"creation with sensitive field": {
 			Action: plans.Create,
 			Mode:   addrs.ManagedResourceMode,
@@ -331,6 +330,46 @@ new line
   + resource "test_instance" "example" {
       + id       = (known after apply)
       + password = (sensitive value)
+    }
+`,
+		},
+		"creation with sensitive nested block in attr": {
+			Action: plans.Create,
+			Mode:   addrs.ManagedResourceMode,
+			Before: cty.NullVal(cty.EmptyObject),
+			After: cty.ObjectVal(map[string]cty.Value{
+				"id": cty.UnknownVal(cty.String),
+				"password": cty.ObjectVal(map[string]cty.Value{
+					"sensitive_nested_attr": cty.StringVal("secret"),
+				}),
+			}),
+			Schema: &configschema.Block{
+				Attributes: map[string]*configschema.Attribute{
+					"id": {Type: cty.String, Computed: true},
+					"password": {
+						NestedBlock: &configschema.NestedBlock{
+							Block: configschema.Block{
+								Attributes: map[string]*configschema.Attribute{
+									"sensitive_nested_attr": {
+										Type:      cty.String,
+										Optional:  true,
+										Computed:  true,
+										Sensitive: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			RequiredReplace: cty.NewPathSet(),
+			Tainted:         false,
+			ExpectedOutput: `  # test_instance.example will be created
+  + resource "test_instance" "example" {
+      + id       = (known after apply)
+      + password = {
+          + sensitive_nested_attr = (sensitive value)
+        }
     }
 `,
 		},

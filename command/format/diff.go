@@ -341,8 +341,17 @@ func (p *blockBodyDiffPrinter) writeAttrDiff(name string, attrS *configschema.At
 	p.buf.WriteString(name)
 	p.buf.WriteString(p.color.Color("[reset]"))
 	p.buf.WriteString(strings.Repeat(" ", nameLen-len(name)))
-	p.buf.WriteString(" = ")
 
+	if attrS.NestedBlock != nil {
+		p.buf.WriteString(" = {")
+		p.writeBlockBodyDiff(&attrS.NestedBlock.Block, old, new, indent+4, path)
+		p.buf.WriteString("\n")
+		p.buf.WriteString(strings.Repeat(" ", indent+2))
+		p.buf.WriteString("}")
+		return false
+	}
+
+	p.buf.WriteString(" = ")
 	if attrS.Sensitive {
 		p.buf.WriteString("(sensitive value)")
 	} else {
