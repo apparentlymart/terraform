@@ -188,8 +188,7 @@ func (a *Attribute) decoderSpec(name string) hcldec.Spec {
 
 	if a.NestedBlock != nil {
 		var optAttrs []string
-		listOptionalAttrsFromBlock(a.NestedBlock.Block, optAttrs)
-
+		optAttrs = listOptionalAttrsFromBlock(a.NestedBlock.Block, optAttrs)
 		ty := a.NestedBlock.Block.ImpliedType()
 		if !ty.IsObjectType() {
 			panic("unpossible")
@@ -205,7 +204,7 @@ func (a *Attribute) decoderSpec(name string) hcldec.Spec {
 	return ret
 }
 
-func listOptionalAttrsFromBlock(b Block, optAttrs []string) {
+func listOptionalAttrsFromBlock(b Block, optAttrs []string) []string {
 	for name, attr := range b.Attributes {
 		if attr.Optional == true {
 			optAttrs = append(optAttrs, name)
@@ -215,4 +214,6 @@ func listOptionalAttrsFromBlock(b Block, optAttrs []string) {
 	for _, block := range b.BlockTypes {
 		listOptionalAttrsFromBlock(block.Block, optAttrs)
 	}
+
+	return optAttrs
 }
