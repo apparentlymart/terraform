@@ -2,6 +2,7 @@ package objchange
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/zclconf/go-cty/cty"
 
@@ -248,6 +249,15 @@ func assertPlannedValueValid(attrS *configschema.Attribute, priorV, configV, pla
 		return errs
 	}
 
+	// FIXME: this is a hacky way to check the collection without returning too
+	// early. THis needs actual refactoring and not just this hack.
+	if attrS.CollectionMetadata != nil {
+		err := assertCollectionValid(attrS, priorV, configV, plannedV)
+		if err == nil {
+			return errs
+		}
+	}
+
 	// If none of the above conditions match, the provider has made an invalid
 	// change to this attribute.
 	if priorV.IsNull() {
@@ -263,5 +273,26 @@ func assertPlannedValueValid(attrS *configschema.Attribute, priorV, configV, pla
 	} else {
 		errs = append(errs, path.NewErrorf("planned value %#v does not match config value %#v nor prior value %#v", plannedV, configV, priorV))
 	}
+
 	return errs
+}
+
+// assertCollectionValid
+func assertCollectionValid(schema *configschema.Attribute, prior, config, planned cty.Value) error {
+	var err error
+	for attr, collMd := range schema.CollectionMetadata {
+		log.Printf("[INFO] checking attr %s\n", attr)
+		configV := config.GetAttr(attr)
+		if collMd.Computed && configV.IsNull() {
+			// The provider is allowed to change the value of any computed
+			// attribute that isn't explicitly set in the config.
+			return err
+		}
+
+		// what else?
+	}
+
+	// if attr-level computed/optional/required are set, use that to apply to the entire object
+	// otherwise check each object attr
+	return err
 }

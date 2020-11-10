@@ -41,7 +41,7 @@ type Attribute struct {
 	Type cty.Type
 
 	// CollectionMetadata contains metadata for collection type attributes.
-	CollectionMetadata *CollectionMetadata
+	CollectionMetadata map[string]*CollectionMetadata
 
 	// These are set from the CollectionTypeMetadata sent by the provider
 	Min, Max int
@@ -79,23 +79,16 @@ type Attribute struct {
 }
 
 type CollectionMetadata struct {
-	// Only valid for objects
-	ObjectAttrMetadata []*ObjectAttrMetadata
-
-	// Only valid for list/set/maps
-	Min, Max int
-}
-
-type ObjectAttrMetadata struct {
-	AttributePath   cty.Path
 	Min, Max        int
 	Description     string
 	DescriptionKind StringKind
 	Required        bool
-	Optional        bool
 	Computed        bool
 	Sensitive       bool
 	Deprecated      bool
+
+	// Nested Attributes
+	CollectionMetadata map[string]*CollectionMetadata
 }
 
 // NestedBlock represents the embedding of one block within another.

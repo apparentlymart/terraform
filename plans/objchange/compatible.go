@@ -393,12 +393,12 @@ func couldBeUnknownBlockPlaceholderElement(v cty.Value, schema *configschema.Nes
 
 			// FIXME: only required for the legacy SDK, but we don't have a
 			// separate codepath to switch the comparisons, and we still want
-			// the rest of the checks from AssertObjectCompatible to apply.
+			// the rest of the checks from AssertBlockCompatible to apply.
 			//
 			// The legacy SDK cannot handle missing strings from set elements,
 			// and will insert an empty string into the planned value.
 			// Skipping these treats them as null values in this case,
-			// preventing false alerts from AssertObjectCompatible.
+			// preventing false alerts from AssertBlockCompatible.
 			if schema.Nesting == configschema.NestingSet && av.Type() == cty.String && av.AsString() == "" {
 				continue
 			}
@@ -471,16 +471,4 @@ func assertSetValuesCompatible(planned, actual cty.Value, path cty.Path, f func(
 		}
 	}
 	return errs
-}
-
-// assertObjectCompatible
-func AssertObjectCompatible(schema *configschema.Attribute, planned, actual cty.Value) []error {
-	return assertObjectCompatible(schema, planned, actual)
-}
-
-func assertObjectCompatible(schema *configschema.Attribute, planned, actual cty.Value) []error {
-	panic("not implemented")
-
-	// if attr-level computed/optional/required are set, use that to apply to the entire object
-	// otherwise check each object attr
 }

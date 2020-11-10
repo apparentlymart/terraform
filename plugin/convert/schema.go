@@ -2,6 +2,7 @@ package convert
 
 import (
 	"encoding/json"
+	"log"
 	"reflect"
 	"sort"
 
@@ -56,67 +57,58 @@ func ConfigSchemaToProto(b *configschema.Block) *proto.Schema_Block {
 	return block
 }
 
-func configSchemaCollectionMetadataToProto(in *configschema.CollectionMetadata) (*proto.Schema_CollectionMetadata, error) {
-	ret := &proto.Schema_CollectionMetadata{
-		Min: int64(in.Min),
-		Max: int64(in.Max),
-	}
+func configSchemaCollectionMetadataToProto(in map[string]*configschema.CollectionMetadata) (map[string]*proto.Schema_CollectionMetadata, error) {
+	ret := make(map[string]*proto.Schema_CollectionMetadata)
 
-	obMeta := make([]*proto.Schema_ObjectAttrMetadata, len(in.ObjectAttrMetadata))
-	for i, om := range in.ObjectAttrMetadata {
-		object := &proto.Schema_ObjectAttrMetadata{
+	for coll, om := range in {
+		object := &proto.Schema_CollectionMetadata{
 			Min:             int64(om.Min),
 			Max:             int64(om.Max),
 			Description:     om.Description,
 			Required:        om.Required,
-			Optional:        om.Optional,
 			Computed:        om.Computed,
 			Sensitive:       om.Sensitive,
 			DescriptionKind: protoStringKind(om.DescriptionKind),
 			Deprecated:      om.Deprecated,
 		}
-		// TODO: This Thing
-		// path, err := AttributePath(om.Path)
-		// if err != nil {
-		// 	return ret, err
-		// }
-		// object.Path = path
-		obMeta[i] = object
+
+		if om.CollectionMetadata != nil {
+			childOm, err := configSchemaCollectionMetadataToProto(om.CollectionMetadata)
+			if err != nil {
+				panic(err)
+			}
+			object.CollectionMetadata = childOm
+		}
+
+		ret[coll] = object
 	}
 
-	ret.ObjectAttrMetadata = obMeta
 	return ret, nil
 }
 
-func protoCollectionMetadataToConfigSchema(in *proto.Schema_CollectionMetadata) (*configschema.CollectionMetadata, error) {
-	ret := &configschema.CollectionMetadata{
-		Min: int(in.Min),
-		Max: int(in.Max),
-	}
+func protoCollectionMetadataToConfigSchema(in map[string]*proto.Schema_CollectionMetadata) (map[string]*configschema.CollectionMetadata, error) {
+	ret := make(map[string]*configschema.CollectionMetadata)
 
-	obMeta := make([]*configschema.ObjectAttrMetadata, len(in.ObjectAttrMetadata))
-	for i, om := range in.ObjectAttrMetadata {
-		object := &configschema.ObjectAttrMetadata{
+	for coll, om := range in {
+		object := &configschema.CollectionMetadata{
 			Min:             int(om.Min),
 			Max:             int(om.Max),
 			Description:     om.Description,
 			Required:        om.Required,
-			Optional:        om.Optional,
 			Computed:        om.Computed,
 			Sensitive:       om.Sensitive,
 			DescriptionKind: schemaStringKind(om.DescriptionKind),
 			Deprecated:      om.Deprecated,
 		}
-		// TODO: This Thing
-		// path, err := AttributePath(om.Path)
-		// if err != nil {
-		// 	return ret, err
-		// }
-		// object.Path = path
-		obMeta[i] = object
+		if om.CollectionMetadata != nil {
+			childOm, err := protoCollectionMetadataToConfigSchema(om.CollectionMetadata)
+			if err != nil {
+				panic(err)
+			}
+			object.CollectionMetadata = childOm
+		}
+		ret[coll] = object
 	}
-
-	ret.ObjectAttrMetadata = obMeta
 	return ret, nil
 }
 
@@ -188,6 +180,7 @@ func ProtoToConfigSchema(b *proto.Schema_Block) *configschema.Block {
 		if err := json.Unmarshal(a.Type, &attr.Type); err != nil {
 			panic(err)
 		}
+		log.Printf("[INFO] attr %s: %#v", a.Name, attr.Type)
 
 		cm, err := protoCollectionMetadataToConfigSchema(a.CollectionMetadata)
 		if err != nil {
