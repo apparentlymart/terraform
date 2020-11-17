@@ -194,7 +194,17 @@ func (a *Attribute) decoderSpec(name string) hcldec.Spec {
 			panic("unpossible")
 		}
 
-		ret.Type = cty.ObjectWithOptionalAttrs(ty.AttributeTypes(), optAttrs)
+		switch a.NestedBlock.Nesting {
+		case NestingList:
+			ret.Type = cty.List(cty.ObjectWithOptionalAttrs(ty.AttributeTypes(), optAttrs))
+		case NestingSet:
+			ret.Type = cty.Set(cty.ObjectWithOptionalAttrs(ty.AttributeTypes(), optAttrs))
+		case NestingMap:
+			ret.Type = cty.Map(cty.ObjectWithOptionalAttrs(ty.AttributeTypes(), optAttrs))
+		// TODO: NestingGroup?
+		default: // NestingSingle or no nesting
+			ret.Type = cty.ObjectWithOptionalAttrs(ty.AttributeTypes(), optAttrs)
+		}
 		ret.Required = a.NestedBlock.MinItems > 0
 
 		return ret

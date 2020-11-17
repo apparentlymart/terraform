@@ -330,6 +330,14 @@ func (p *blockBodyDiffPrinter) writeAttrDiff(name string, attrS *configschema.At
 		return true
 	}
 
+	// FIXME: this may call for a custom printer; as-is this prints blocks like,
+	// well, blocks, and we'd rather see for e.g. a list of objects, not
+	// repeated blocks.
+	if attrS.NestedBlock != nil {
+		p.writeNestedBlockDiffs(name, attrS.NestedBlock, old, new, false, indent-2, path)
+		return false
+	}
+
 	p.buf.WriteString("\n")
 
 	p.writeSensitivityWarning(old, new, indent, action, false)
@@ -341,15 +349,6 @@ func (p *blockBodyDiffPrinter) writeAttrDiff(name string, attrS *configschema.At
 	p.buf.WriteString(name)
 	p.buf.WriteString(p.color.Color("[reset]"))
 	p.buf.WriteString(strings.Repeat(" ", nameLen-len(name)))
-
-	if attrS.NestedBlock != nil {
-		p.buf.WriteString(" = {")
-		p.writeBlockBodyDiff(&attrS.NestedBlock.Block, old, new, indent+4, path)
-		p.buf.WriteString("\n")
-		p.buf.WriteString(strings.Repeat(" ", indent+2))
-		p.buf.WriteString("}")
-		return false
-	}
 
 	p.buf.WriteString(" = ")
 	if attrS.Sensitive {
@@ -368,7 +367,6 @@ func (p *blockBodyDiffPrinter) writeAttrDiff(name string, attrS *configschema.At
 			p.writeValueDiff(old, new, indent+2, path)
 		}
 	}
-
 	return false
 }
 
