@@ -2,6 +2,7 @@ package objchange
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/zclconf/go-cty/cty"
 
@@ -82,6 +83,9 @@ func proposedNewObject(schema *configschema.Block, prior, config cty.Value) cty.
 	for name, attr := range schema.Attributes {
 		priorV := prior.GetAttr(name)
 		configV := config.GetAttr(name)
+
+		log.Printf("[INFO] attr %s priorV %#v\n", name, priorV)
+
 		var newV cty.Value
 		switch {
 		case attr.Computed && attr.Optional:
