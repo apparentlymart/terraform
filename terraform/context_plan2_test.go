@@ -358,7 +358,7 @@ resource "test_object" "a" {
 		Providers: map[addrs.Provider]providers.Factory{
 			addrs.NewDefaultProvider("test"): testProviderFuncFixed(p),
 		},
-		Destroy:     true,
+		PlanMode:    plans.DestroyMode,
 		SkipRefresh: true,
 	})
 
