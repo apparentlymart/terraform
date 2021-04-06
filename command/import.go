@@ -9,12 +9,15 @@ import (
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/zclconf/go-cty/cty"
 
 	"github.com/hashicorp/terraform/addrs"
 	"github.com/hashicorp/terraform/backend"
 	"github.com/hashicorp/terraform/command/arguments"
 	"github.com/hashicorp/terraform/command/views"
 	"github.com/hashicorp/terraform/configs"
+	"github.com/hashicorp/terraform/configs/configschema"
+	"github.com/hashicorp/terraform/states"
 	"github.com/hashicorp/terraform/terraform"
 	"github.com/hashicorp/terraform/tfdiags"
 )
@@ -257,6 +260,43 @@ func (c *ImportCommand) Run(args []string) int {
 		return 1
 	}
 
+	// If -allow-missing-config and -write-config are both set, write the resource's implied configuration
+	// -write-config would be better reimagined as -config-out=filename or whatever.
+	if c.Meta.allowMissingConfig && c.Meta.writeConfig {
+		if addr.Resource.Key != addrs.NoKey {
+			c.Ui.Error("cannot write configuration for an expanded resource (one created with count or for_each")
+			return 1
+		}
+		f, err := os.Create("import.tf")
+		if err != nil {
+			c.Ui.Error("error creating file import.tf")
+			return 1
+		}
+		defer f.Close()
+
+		// we need the state (for the actual information) and the schema (so we know which attributes are not computed)
+		// Get the schemas from the context
+		schemas := ctx.Schemas()
+
+		// For the sake of a quick prototype I will assume the implied type is the correct type, but we should inc
+		provider := addr.Resource.Resource.ImpliedProvider()
+		absProvider := addrs.ImpliedProviderForUnqualifiedType(provider)
+
+		if _, exists := schemas.Providers[absProvider]; !exists {
+			c.Ui.Error(fmt.Sprintf("# missing schema for provider %q\n\n", absProvider.String()))
+		}
+
+		schema, _ := schemas.ResourceTypeConfig(absProvider, addrs.ManagedResourceMode, addr.Resource.Resource.Type)
+
+		var buf strings.Builder
+		buf.WriteString(fmt.Sprintf("resource %q %q {\n", addr.Resource.Resource.Type, addr.Resource.Resource.Name))
+		rs, _ := newState.ResourceInstance(addr).Current.Decode(schema.ImpliedType())
+		writeStateAttributes(&buf, schema.Attributes, rs, 2)
+		writeStateBlocks(&buf, schema.BlockTypes, rs, 2)
+		buf.WriteString("}\n")
+		f.Write([]byte(buf.String()))
+	}
+
 	c.Ui.Output(c.Colorize().Color("[reset][green]\n" + importCommandSuccessMsg))
 
 	if c.Meta.allowMissingConfig && rc == nil {
@@ -269,6 +309,51 @@ func (c *ImportCommand) Run(args []string) int {
 	}
 
 	return 0
+}
+
+func writeStateAttributes(buf *strings.Builder, attrs map[string]*configschema.Attribute, state *states.ResourceInstanceObject, indent int) {
+	if len(attrs) == 0 {
+		return
+	}
+	for name, attrS := range attrs {
+		if attrS.Required || attrS.Optional {
+
+			buf.WriteString(strings.Repeat(" ", indent))
+			attrV := state.Value.GetAttr(name)
+			switch {
+			case attrV.IsNull():
+				// do nothing
+			case attrV.Type().IsPrimitiveType():
+				switch attrV.Type() {
+				case cty.String:
+					buf.WriteString(fmt.Sprintf("%s = %s\n", name, attrV.AsString()))
+				case cty.Number:
+					int, _ := attrV.AsBigFloat().Int64()
+					buf.WriteString(fmt.Sprintf("%s = %d\n", name, int))
+				}
+				// etc etc; collection types will require actual formatting.
+			}
+		}
+	}
+}
+
+func writeStateBlocks(buf *strings.Builder, blocks map[string]*configschema.NestedBlock, state *states.ResourceInstanceObject, indent int) {
+	if len(blocks) == 0 {
+		return
+	}
+	for name, blockS := range blocks {
+		// This is a minimal implementation that doesn't deal with configModeAttr
+		buf.WriteString(strings.Repeat(" ", indent))
+		buf.WriteString(fmt.Sprintf("%s {", name))
+		if len(blockS.Attributes) > 0 {
+			writeStateAttributes(buf, blockS.Attributes, state, indent+2)
+		}
+		if len(blockS.BlockTypes) > 0 {
+			writeStateBlocks(buf, blockS.BlockTypes, state, indent+2)
+		}
+		buf.WriteString(strings.Repeat(" ", indent))
+		buf.WriteString("}\n")
+	}
 }
 
 func (c *ImportCommand) Help() string {

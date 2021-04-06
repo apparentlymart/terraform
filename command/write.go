@@ -96,8 +96,8 @@ func (c *WriteCommand) Run(args []string) int {
 
 	var buf strings.Builder
 	buf.WriteString(fmt.Sprintf("resource %q %q {\n", absAddr.Resource.Type, absAddr.Resource.Name))
-	writeAttributes(&buf, schema.Attributes, 2)
-	writeBlocks(&buf, schema.BlockTypes, 2)
+	writeConfigAttributes(&buf, schema.Attributes, 2)
+	writeConfigBlocks(&buf, schema.BlockTypes, 2)
 
 	buf.WriteString("}\n")
 	f.Write([]byte(buf.String()))
@@ -113,7 +113,7 @@ func (c *WriteCommand) Synopsis() string {
 	return "Write a resource configuration to a file, maybe, who knows"
 }
 
-func writeAttributes(buf *strings.Builder, attrs map[string]*configschema.Attribute, indent int) {
+func writeConfigAttributes(buf *strings.Builder, attrs map[string]*configschema.Attribute, indent int) {
 	if len(attrs) == 0 {
 		return
 	}
@@ -131,7 +131,7 @@ func writeAttributes(buf *strings.Builder, attrs map[string]*configschema.Attrib
 	}
 }
 
-func writeBlocks(buf *strings.Builder, blocks map[string]*configschema.NestedBlock, indent int) {
+func writeConfigBlocks(buf *strings.Builder, blocks map[string]*configschema.NestedBlock, indent int) {
 	if len(blocks) == 0 {
 		return
 	}
@@ -141,10 +141,10 @@ func writeBlocks(buf *strings.Builder, blocks map[string]*configschema.NestedBlo
 			buf.WriteString(strings.Repeat(" ", indent))
 			buf.WriteString(fmt.Sprintf("%s {", name))
 			if len(blockS.Attributes) > 0 {
-				writeAttributes(buf, blockS.Attributes, indent+2)
+				writeConfigAttributes(buf, blockS.Attributes, indent+2)
 			}
 			if len(blockS.BlockTypes) > 0 {
-				writeBlocks(buf, blockS.BlockTypes, indent+2)
+				writeConfigBlocks(buf, blockS.BlockTypes, indent+2)
 			}
 			buf.WriteString(strings.Repeat(" ", indent))
 			buf.WriteString("}\n")
