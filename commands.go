@@ -330,6 +330,10 @@ func initCommands(
 			}, nil
 		},
 
+		"write": func() (cli.Command, error) {
+			return &command.WriteCommand{Meta: meta}, nil
+		},
+
 		//-----------------------------------------------------------
 		// Plumbing
 		//-----------------------------------------------------------
