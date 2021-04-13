@@ -8,23 +8,28 @@ import (
 	"github.com/hashicorp/terraform/addrs"
 	"github.com/hashicorp/terraform/backend"
 	"github.com/hashicorp/terraform/configs/configschema"
-	"github.com/hashicorp/terraform/tfdiags"
 )
 
-// WriteCommand is a Command implementation that writes a resource to a given file.
-type WriteCommand struct {
+// AddCommand is a Command implementation that writes a template resource config block to a given file.
+type AddCommand struct {
 	Meta
 }
 
-func (c *WriteCommand) Run(args []string) int {
-	// This should take a resource address and (optional?) filename
-	// Other ideas:
-	// 	* -verbose, to control inclusion of provider's descriptions
+func (c *AddCommand) Run(args []string) int {
+	// This command takes a resource address and output filename. Some flags to consider
+	// adding:
+	//  * -verbose, to control inclusion of provider's descriptions
 	//  * -something to toggle required only vs. required + optional attrs
 	//  * -provider, to override the resource's implied provider (required in case of collision in config)
+	//  * -json, to write json instead of hcl
+	// It would also be neat to write out a provider configuration block from
+	// info in required_providers - the arg could be a provider or resource
 	args = c.Meta.process(args)
 	addrStr := args[0]
-	var diags tfdiags.Diagnostics
+	filename := "import.tf"
+	if len(args) > 1 {
+		filename = args[1]
+	}
 
 	absAddr, diags := addrs.ParseAbsResourceStr(addrStr)
 	if diags.HasErrors() {
@@ -73,10 +78,13 @@ func (c *WriteCommand) Run(args []string) int {
 		return 1
 	}
 
+	// TODO: load the configuration and check that the resource address doesn't
+	// already exist in the config
+
 	// Get the schemas from the context
 	schemas := ctx.Schemas()
 
-	// For the sake of a quick prototype I will assume the implied type is the correct type, but we should inc
+	// For the sake of a quick prototype I will assume the implied type is the correct type.
 	provider := absAddr.Resource.ImpliedProvider()
 	absProvider := addrs.ImpliedProviderForUnqualifiedType(provider)
 
@@ -86,10 +94,13 @@ func (c *WriteCommand) Run(args []string) int {
 
 	schema, _ := schemas.ResourceTypeConfig(absProvider, absAddr.Resource.Mode, absAddr.Resource.Type)
 
-	// hard coding filename for now, prototype laziness in action
-	f, err := os.Create("import.tf")
+	// For now, we'll required a new file, but there's no reason we couldn't append.
+	if _, err := os.Stat(filename); err == nil {
+		c.Ui.Error(fmt.Sprintf("file %s already exists", filename))
+	}
+	f, err := os.Create(filename)
 	if err != nil {
-		c.Ui.Error("error creating file import.tf")
+		c.Ui.Error(fmt.Sprintf("error creating file %s", filename))
 		return 1
 	}
 	defer f.Close()
@@ -105,12 +116,14 @@ func (c *WriteCommand) Run(args []string) int {
 	return 0
 }
 
-func (c *WriteCommand) Help() string {
-	return "heck if i know"
+func (c *AddCommand) Help() string {
+	helpText := `
+Usage: terraform [global options] add [options] ADDRESS`
+	return strings.TrimSpace(helpText)
 }
 
-func (c *WriteCommand) Synopsis() string {
-	return "Write a resource configuration to a file, maybe, who knows"
+func (c *AddCommand) Synopsis() string {
+	return "Add a resource configuration to a file"
 }
 
 func writeConfigAttributes(buf *strings.Builder, attrs map[string]*configschema.Attribute, indent int) {
